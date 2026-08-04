@@ -35,6 +35,7 @@
     "package": "npx @vscode/vsce package --allow-missing-repository",
     "publish:vscode": "vsce publish",
     "publish:openvsx": "ovsx publish",
+    "publish:env": "npx tsx scripts/publish-all.ts",
     "publish:all": "npm run publish:vscode && npm run publish:openvsx"
   },
   "devDependencies": {

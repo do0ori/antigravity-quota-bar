@@ -7,3 +7,5 @@ preview.html
 tsconfig.json
 *.vsix
 .gitignore
+.env
+.env.*
