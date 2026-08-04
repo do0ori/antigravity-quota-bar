@@ -115,16 +115,18 @@ function parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: strin
       .replace(/,\s*/g, ' ');
   }
 
-  // 2. Check if limit is hit in THIS section's text
-  if (subStr.includes('hit your')) {
+  // 2. Check if this specific limit is hit (0%)
+  // For 5-hour limit: "hit your 5-hour limit, it will refresh in..."
+  // For weekly limit: "hit your weekly limit"
+  if (subStr.includes('hit your weekly limit') || (subStr.includes('hit your 5-hour limit') && !subStr.includes('does not currently apply'))) {
     return { percentage: 0, resetText };
   }
 
-  // 3. Extract percentage float from binary
+  // 3. Extract IEEE 754 Float from binary payload (0.0 to 1.0)
   let percentage = 100;
   for (let i = 0; i <= sub.length - 4; i++) {
     const flt = sub.readFloatLE(i);
-    if (!isNaN(flt) && flt > 0.001 && flt < 0.999) {
+    if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
       percentage = Math.round(flt * 100);
       break;
     }
@@ -159,7 +161,7 @@ export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
 
 async function main() {
   console.log("==================================================");
-  console.log(" Testing Precise Section Boundary Parser");
+  console.log(" Testing Accurate Weekly vs 5-Hour Hit Detector");
   console.log("==================================================");
 
   const conn = findLanguageServer();

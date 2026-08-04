@@ -113,16 +113,16 @@ export class QuotaClient {
         .replace(/,\s*/g, ' ');
     }
 
-    // 2. Check if limit is hit in THIS section's text
-    if (subStr.includes('hit your')) {
+    // 2. Check if this specific limit is hit (0%)
+    if (subStr.includes('hit your weekly limit') || (subStr.includes('hit your 5-hour limit') && !subStr.includes('does not currently apply'))) {
       return { percentage: 0, resetText };
     }
 
-    // 3. Extract percentage float from binary
+    // 3. Extract IEEE 754 Float from binary payload (0.0 to 1.0)
     let percentage = 100;
     for (let i = 0; i <= sub.length - 4; i++) {
       const flt = sub.readFloatLE(i);
-      if (!isNaN(flt) && flt > 0.001 && flt < 0.999) {
+      if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
         percentage = Math.round(flt * 100);
         break;
       }
