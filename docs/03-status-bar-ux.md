@@ -1,35 +1,47 @@
 # Status Bar UX Specification
 
-## 상태바 기본 표기 규칙
+## 상태바 표기 규칙
 
-### Compact Format (기본값)
-`G W67 H100 │ C/G W33 H0`
+### Status Bar Format (5-Hour Limit % Only)
+`$(sparkle) 78% │ $(hubot) 0%`
 
-- `G`: Gemini Models
-- `C/G`: Claude & GPT Models
-- `W`: Weekly Limit (%)
-- `H`: 5-Hour Limit (%)
+- **Provider Icons**:
+  - `$(sparkle)`: Gemini Models (5-Hour Limit %)
+  - `$(hubot)`: Claude & GPT Models (5-Hour Limit %)
+- **상태바 미니멀 지향**: 복잡한 주간/5시간 텍스트 중첩을 지양하고 5시간 잔여 쿼터 %만 직관적으로 표기합니다.
 
-## 마우스 오버 툴팁 (Hover Details)
+## Hover HTML Table Tooltip (Pixel-Perfect Alignment)
 
-```text
-Antigravity Model Quota Status
+```html
+<h3>✨ Gemini Models</h3>
+<table>
+  <tr>
+    <td width="110"><b>Weekly Limit</b></td>
+    <td><img src="data:image/svg+xml;..." align="center" /></td>
+    <td width="40" align="right"><b>63%</b></td>
+    <td><i>(Refreshes in 6d 12h)</i></td>
+  </tr>
+  <tr>
+    <td width="110"><b>5-Hour Limit</b></td>
+    <td><img src="data:image/svg+xml;..." align="center" /></td>
+    <td width="40" align="right"><b>78%</b></td>
+    <td><i>(Refreshes in 4h 2m)</i></td>
+  </tr>
+</table>
 
-Gemini Models
-- Weekly Limit: 67% (Refreshes in 6d 13h)
-- 5-Hour Limit: 100% (Fully Refreshed)
-
-Claude & GPT Models
-- Weekly Limit: 33%
-- 5-Hour Limit: 0% ⚠️ (Refreshes in 1h 37m)
-
-Last Updated: 20:44:00
+<h3>🤖 Claude and GPT models</h3>
+<table>
+  <tr>
+    <td width="110"><b>Weekly Limit</b></td>
+    <td><img src="data:image/svg+xml;..." align="center" /></td>
+    <td width="40" align="right"><b>33%</b></td>
+    <td><i>(Refreshes in 32m)</i></td>
+  </tr>
+  <tr>
+    <td width="110"><b>5-Hour Limit</b></td>
+    <td><img src="data:image/svg+xml;..." align="center" /></td>
+    <td width="40" align="right"><b>0%</b></td>
+    <td><i>(Refreshes in 32m)</i></td>
+  </tr>
+</table>
 ```
-
-## 상태별 상태바 UI 변화
-
-1. **정상 상태**: 기본 아이콘 `$(sparkle)` 및 일반 텍스트
-2. **경고 (Limit < 20%)**: `$(warning)` 아이콘 및 주황색 경고
-3. **한도 도달 (Limit = 0%)**: `$(error)` 아이콘 및 빨간색 강조
-4. **로딩 중**: `$(sync~spin) Quota...`
-5. **연결 실패 / 서버 미감지**: `$(warning) Quota Offline`

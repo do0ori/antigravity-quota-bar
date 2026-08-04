@@ -5,24 +5,13 @@ import { SvgGenerator } from './svgGenerator';
 export class QuotaStatusBar {
   private statusBarItem: vscode.StatusBarItem;
 
-  constructor() {
+  constructor(private extensionPath: string) {
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Right,
       100
     );
     this.statusBarItem.command = 'antigravityQuota.refresh';
     this.statusBarItem.show();
-  }
-
-  /**
-   * Return a circular ring progress character for the main Status Bar Item
-   */
-  private getCircleRing(percent: number): string {
-    if (percent >= 88) return '●'; // fully filled
-    if (percent >= 63) return '◕'; // 3/4 filled
-    if (percent >= 38) return '◑'; // half filled
-    if (percent >= 13) return '◔'; // 1/4 filled
-    return '◯'; // empty ring
   }
 
   public update(snapshot: ModelQuotaSnapshot): void {
@@ -35,43 +24,65 @@ export class QuotaStatusBar {
 
     const { gemini, claudeGpt } = snapshot;
 
-    // Circle Rings directly rendered in the main Status Bar Item!
-    const gRingW = this.getCircleRing(gemini.weeklyPercent);
-    const gRingH = this.getCircleRing(gemini.fiveHourPercent);
+    // Status Bar Item: Show 5-Hour Limit % only (Gemini $(sparkle), Claude/GPT $(hubot))
+    this.statusBarItem.text = `$(sparkle) ${gemini.fiveHourPercent}%  │  $(hubot) ${claudeGpt.fiveHourPercent}%`;
 
-    const cRingW = this.getCircleRing(claudeGpt.weeklyPercent);
-    const cRingH = this.getCircleRing(claudeGpt.fiveHourPercent);
-
-    // Status Bar Text: Provider Logos + Circular Rings + Percentages
-    this.statusBarItem.text = `$(sparkle) ${gRingW}${gemini.weeklyPercent}% ${gRingH}${gemini.fiveHourPercent}%  │  $(hubot) ${cRingW}${claudeGpt.weeklyPercent}% ${cRingH}${claudeGpt.fiveHourPercent}%`;
-
-    // Seamless background blending (no harsh red background)
+    // Seamless background blending
     this.statusBarItem.backgroundColor = undefined;
 
-    // Hover Tooltip rendered with REAL SVG 100-Percentage Progress Bars!
+    // Hover Tooltip using HTML <table> for pixel-perfect progress bar alignment
     const tooltip = new vscode.MarkdownString();
     tooltip.isTrusted = true;
     tooltip.supportHtml = true;
 
-    tooltip.appendMarkdown(`### ⚡ Antigravity Model Quota Status\n\n`);
-
-    // Gemini Models Section with 100-percentage SVG Progress Bar
-    const gWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(gemini.weeklyPercent, 140, 10);
-    const g5hBar = SvgGenerator.createProgressBarSvgDataUri(gemini.fiveHourPercent, 140, 10);
-
-    tooltip.appendMarkdown(`#### ✨ Gemini Models\n`);
-    tooltip.appendMarkdown(`- **Weekly Limit**: <img src="${gWeeklyBar}" align="center" /> **${gemini.weeklyPercent}%** ${gemini.weeklyResetText ? `*(Refreshes in ${gemini.weeklyResetText})*` : ''}\n\n`);
-    tooltip.appendMarkdown(`- **5-Hour Limit**: <img src="${g5hBar}" align="center" /> **${gemini.fiveHourPercent}%** ${gemini.fiveHourResetText ? `*(Refreshes in ${gemini.fiveHourResetText})*` : ''}\n\n`);
+    // Gemini Models Section
+    const gWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(gemini.weeklyPercent, 130, 10);
+    const g5hBar = SvgGenerator.createProgressBarSvgDataUri(gemini.fiveHourPercent, 130, 10);
 
     // Claude & GPT Models Section
-    const cWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.weeklyPercent, 140, 10);
-    const c5hBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.fiveHourPercent, 140, 10);
+    const cWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.weeklyPercent, 130, 10);
+    const c5hBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.fiveHourPercent, 130, 10);
 
-    tooltip.appendMarkdown(`#### 🤖 Claude and GPT models\n`);
-    tooltip.appendMarkdown(`- **Weekly Limit**: <img src="${cWeeklyBar}" align="center" /> **${claudeGpt.weeklyPercent}%** ${claudeGpt.weeklyResetText ? `*(Refreshes in ${claudeGpt.weeklyResetText})*` : ''}\n\n`);
-    tooltip.appendMarkdown(`- **5-Hour Limit**: <img src="${c5hBar}" align="center" /> **${claudeGpt.fiveHourPercent}%** ${claudeGpt.fiveHourResetText ? `*(Refreshes in ${claudeGpt.fiveHourResetText})*` : ''}\n\n`);
+    const htmlContent = `
+<h3>✨ Gemini Models</h3>
+<table border="0" cellpadding="3" cellspacing="0">
+  <tr>
+    <td width="110"><b>Weekly Limit</b></td>
+    <td><img src="${gWeeklyBar}" align="center" /></td>
+    <td width="40" align="right"><b>${gemini.weeklyPercent}%</b></td>
+    <td style="color:#888;"><i>${gemini.weeklyResetText ? `(Refreshes in ${gemini.weeklyResetText})` : ''}</i></td>
+  </tr>
+  <tr>
+    <td width="110"><b>5-Hour Limit</b></td>
+    <td><img src="${g5hBar}" align="center" /></td>
+    <td width="40" align="right"><b>${gemini.fiveHourPercent}%</b></td>
+    <td style="color:#888;"><i>${gemini.fiveHourResetText ? `(Refreshes in ${gemini.fiveHourResetText})` : ''}</i></td>
+  </tr>
+</table>
 
-    tooltip.appendMarkdown(`---\n*Updated ${snapshot.fetchedAt.toLocaleTimeString()} • Click status bar to refresh*`);
+<br/>
+
+<h3>🤖 Claude and GPT models</h3>
+<table border="0" cellpadding="3" cellspacing="0">
+  <tr>
+    <td width="110"><b>Weekly Limit</b></td>
+    <td><img src="${cWeeklyBar}" align="center" /></td>
+    <td width="40" align="right"><b>${claudeGpt.weeklyPercent}%</b></td>
+    <td style="color:#888;"><i>${claudeGpt.weeklyResetText ? `(Refreshes in ${claudeGpt.weeklyResetText})` : ''}</i></td>
+  </tr>
+  <tr>
+    <td width="110"><b>5-Hour Limit</b></td>
+    <td><img src="${c5hBar}" align="center" /></td>
+    <td width="40" align="right"><b>${claudeGpt.fiveHourPercent}%</b></td>
+    <td style="color:#888;"><i>${claudeGpt.fiveHourResetText ? `(Refreshes in ${claudeGpt.fiveHourResetText})` : ''}</i></td>
+  </tr>
+</table>
+
+<hr/>
+<div style="font-size:11px; color:#888;">Updated ${snapshot.fetchedAt.toLocaleTimeString()} • Click status bar to refresh</div>
+`;
+
+    tooltip.appendMarkdown(htmlContent);
 
     this.statusBarItem.tooltip = tooltip;
   }
