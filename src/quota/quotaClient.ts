@@ -99,17 +99,16 @@ export class QuotaClient {
     const sub = endIdx !== -1 ? buf.subarray(idx, endIdx) : buf.subarray(idx, Math.min(buf.length, idx + 250));
     const subStr = sub.toString('utf8');
 
-    // 1. Extract Reset Text
+    // 1. Extract Reset Text (flexible matching for all refresh text variations)
     let resetText: string | undefined = undefined;
-    const resetMatch = subStr.match(/refresh in ([0-9]+ [a-z]+(?:, [0-9]+ [a-z]+)?)/i);
+    const resetMatch = subStr.match(/(?:will\s+|fully\s+)*refresh\s+in\s+([0-9]+\s+[a-z]+(?:,\s*[0-9]+\s+[a-z]+)?)/i) ||
+                       subStr.match(/in\s+([0-9]+\s+(?:days?|hours?|minutes?)(?:,\s*[0-9]+\s+(?:days?|hours?|minutes?))?)/i);
+
     if (resetMatch) {
       resetText = resetMatch[1]
-        .replace(' days', 'd')
-        .replace(' day', 'd')
-        .replace(' hours', 'h')
-        .replace(' hour', 'h')
-        .replace(' minutes', 'm')
-        .replace(' minute', 'm')
+        .replace(/\s*days?/gi, 'd')
+        .replace(/\s*hours?/gi, 'h')
+        .replace(/\s*minutes?/gi, 'm')
         .replace(/,\s*/g, ' ');
     }
 
