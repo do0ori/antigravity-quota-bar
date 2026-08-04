@@ -2,66 +2,66 @@ import { execSync } from 'child_process';
 import http from 'http';
 import https from 'https';
 
-interface ProcessInfo {
-  pid: number;
-  csrfToken?: string;
-  extensionPort?: number;
-  listeningPorts: number[];
+export interface QuotaMetric {
+  weeklyPercent: number;
+  weeklyResetText?: string;
+  fiveHourPercent: number;
+  fiveHourResetText?: string;
 }
 
-function findLanguageServer(): ProcessInfo[] {
+export interface ModelQuotaSnapshot {
+  gemini: QuotaMetric;
+  claudeGpt: QuotaMetric;
+  fetchedAt: Date;
+  isAvailable: boolean;
+  errorMessage?: string;
+}
+
+function findLanguageServer(): { pid: number; csrfToken: string; extensionPort?: number; listeningPorts: number[] } | null {
   try {
-    // Run wmic command directly
-    const wmicOut = execSync('wmic process where "name like \'%language_server%\'" get processid,commandline /format:csv', { encoding: 'utf-8' });
-    const lines = wmicOut.split(/\r?\n/).filter(line => line.trim() && !line.startsWith('Node,CommandLine'));
-    const results: ProcessInfo[] = [];
+    const tasklistOut = execSync('tasklist /FI "IMAGENAME eq language_server_windows_x64.exe" /FO CSV /NH', { encoding: 'utf-8' }).trim();
+    if (!tasklistOut || tasklistOut.includes('No tasks')) return null;
 
+    const lines = tasklistOut.split(/\r?\n/).filter(Boolean);
     for (const line of lines) {
-      const parts = line.split(',');
-      if (parts.length < 3) continue;
-      
-      const pidStr = parts[parts.length - 1].trim();
-      const pid = parseInt(pidStr, 10);
-      const commandLine = parts.slice(1, parts.length - 1).join(',');
+      const parts = line.split('","').map(p => p.replace(/"/g, ''));
+      if (parts.length < 2) continue;
+      const pid = parseInt(parts[1], 10);
+      if (!pid) continue;
 
-      if (!pid || isNaN(pid)) continue;
+      let commandLine = '';
+      try {
+        commandLine = execSync(`powershell -NoProfile -Command "(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine"`, { encoding: 'utf-8' }).trim();
+      } catch (e) {}
 
       const csrfMatch = commandLine.match(/--csrf_token\s+([a-f0-9\-]+)/i);
       const csrfToken = csrfMatch ? csrfMatch[1] : undefined;
+      if (!csrfToken) continue;
 
       const extPortMatch = commandLine.match(/--extension_server_port\s+(\d+)/i);
       const extensionPort = extPortMatch ? parseInt(extPortMatch[1], 10) : undefined;
 
       let listeningPorts: number[] = [];
       try {
-        const netCmd = `powershell -NoProfile -Command "Get-NetTCPConnection -State Listen -OwningProcess ${pid} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"`;
-        const netOut = execSync(netCmd, { encoding: 'utf-8' }).trim();
+        const netOut = execSync(`powershell -NoProfile -Command "(Get-NetTCPConnection -State Listen -OwningProcess ${pid} -ErrorAction SilentlyContinue).LocalPort"`, { encoding: 'utf-8' }).trim();
         if (netOut) {
           listeningPorts = netOut.split(/\r?\n/).map(p => parseInt(p.trim(), 10)).filter(Boolean);
         }
       } catch (e) {}
 
-      console.log(`\nFound Language Server [PID ${pid}]:`);
-      console.log(`  CSRF Token: ${csrfToken || 'None'}`);
-      console.log(`  Extension Port: ${extensionPort || 'None'}`);
-      console.log(`  Listening Ports: ${listeningPorts.join(', ') || 'None'}`);
-
-      results.push({ pid, csrfToken, extensionPort, listeningPorts });
+      return { pid, csrfToken, extensionPort, listeningPorts };
     }
-    return results;
-  } catch (e: any) {
-    console.error("Error finding processes:", e.message);
-    return [];
-  }
+  } catch (e) {}
+  return null;
 }
 
-function fetchGrpcWeb(isHttps: boolean, port: number, path: string, token: string, requestPayload: Buffer): Promise<{ status?: number; data: Buffer }> {
+function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const module = isHttps ? https : http;
+    const path = '/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary';
     const frameHeader = Buffer.alloc(5);
     frameHeader.writeUInt8(0x00, 0);
-    frameHeader.writeUInt32BE(requestPayload.length, 1);
-    const bodyBuf = Buffer.concat([frameHeader, requestPayload]);
+    frameHeader.writeUInt32BE(0, 1);
 
     const req = module.request({
       hostname: '127.0.0.1',
@@ -71,92 +71,121 @@ function fetchGrpcWeb(isHttps: boolean, port: number, path: string, token: strin
       headers: {
         'Content-Type': 'application/grpc-web+proto',
         'X-User-Agent': 'grpc-web-javascript/0.1',
-        'x-csrf-token': token,
-        'X-CSRF-Token': token,
-        'Content-Length': bodyBuf.length
+        'x-codeium-csrf-token': csrfToken,
+        'X-Codeium-Csrf-Token': csrfToken,
+        'Content-Length': frameHeader.length
       },
       rejectUnauthorized: false,
       timeout: 3000
     }, (res) => {
       let chunks: Buffer[] = [];
       res.on('data', c => chunks.push(c));
-      res.on('end', () => resolve({ status: res.statusCode, data: Buffer.concat(chunks) }));
+      res.on('end', () => resolve(res.statusCode === 200 ? Buffer.concat(chunks) : null));
     });
 
-    req.on('error', () => resolve({ status: undefined, data: Buffer.alloc(0) }));
-    req.on('timeout', () => { req.destroy(); resolve({ status: undefined, data: Buffer.alloc(0) }); });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
 
-    req.write(bodyBuf);
+    req.write(frameHeader);
     req.end();
   });
 }
 
-function parseGrpcWebFrames(buf: Buffer) {
-  let offset = 0;
-  let frameCount = 0;
+function parseSectionQuota(buf: Buffer, sectionId: string): { percentage: number; resetText?: string } {
+  const idx = buf.indexOf(sectionId);
+  if (idx === -1) {
+    return { percentage: 100 };
+  }
 
-  while (offset < buf.length) {
-    if (offset + 5 > buf.length) break;
-    const flag = buf.readUInt8(offset);
-    const length = buf.readUInt32BE(offset + 1);
-    offset += 5;
+  const sub = buf.subarray(idx, Math.min(buf.length, idx + 350));
+  const subStr = sub.toString('utf8');
 
-    if (offset + length > buf.length) break;
-    const frameData = buf.subarray(offset, offset + length);
-    offset += length;
-    frameCount++;
+  // Extract Reset Text
+  let resetText: string | undefined = undefined;
+  const resetMatch = subStr.match(/refresh in ([0-9]+ [a-z]+(?:, [0-9]+ [a-z]+)?)/i);
+  if (resetMatch) {
+    resetText = resetMatch[1]
+      .replace(' days', 'd')
+      .replace(' day', 'd')
+      .replace(' hours', 'h')
+      .replace(' hour', 'h')
+      .replace(' minutes', 'm')
+      .replace(' minute', 'm')
+      .replace(/,\s*/g, ' ');
+  }
 
-    const isTrailers = (flag & 0x80) !== 0;
-    console.log(`\n  --- Frame #${frameCount} (${isTrailers ? 'TRAILERS' : 'DATA'}, ${length} bytes) ---`);
-    if (isTrailers) {
-      console.log('  ' + frameData.toString('utf8').replace(/\r?\n/g, '\n  '));
-    } else {
-      console.log(`  Raw Hex: ${frameData.toString('hex')}`);
-      console.log(`  Printable: ${frameData.toString('utf8').replace(/[^\x20-\x7E]/g, '.')}`);
+  let percentage = 100;
+
+  // 1. Try text percentage match (e.g. "%65" or "65%")
+  const pctTextMatch = subStr.match(/%([0-9]{1,3})|([0-9]{1,3})%/);
+  if (pctTextMatch) {
+    const val = parseInt(pctTextMatch[1] || pctTextMatch[2], 10);
+    if (!isNaN(val) && val >= 0 && val <= 100) {
+      percentage = val;
+      return { percentage, resetText };
     }
   }
+
+  // 2. Try binary IEEE 754 float
+  for (let i = 0; i <= sub.length - 4; i++) {
+    const flt = sub.readFloatLE(i);
+    if (!isNaN(flt) && flt > 0.001 && flt < 0.999) {
+      percentage = Math.round(flt * 100);
+      break;
+    }
+  }
+
+  return { percentage, resetText };
+}
+
+export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
+  const geminiWeekly = parseSectionQuota(buf, 'gemini-weekly');
+  const gemini5h = parseSectionQuota(buf, 'gemini-5h');
+  const claudeWeekly = parseSectionQuota(buf, '3p-weekly');
+  const claude5h = parseSectionQuota(buf, '3p-5h');
+
+  return {
+    gemini: {
+      weeklyPercent: geminiWeekly.percentage,
+      weeklyResetText: geminiWeekly.resetText,
+      fiveHourPercent: gemini5h.percentage,
+      fiveHourResetText: gemini5h.resetText
+    },
+    claudeGpt: {
+      weeklyPercent: claudeWeekly.percentage,
+      weeklyResetText: claudeWeekly.resetText,
+      fiveHourPercent: claude5h.percentage,
+      fiveHourResetText: claude5h.resetText
+    },
+    fetchedAt: new Date(),
+    isAvailable: true
+  };
 }
 
 async function main() {
   console.log("==================================================");
-  console.log(" Antigravity User Status & Quota Probe v5");
+  console.log(" Testing Live Percentage & Reset Extractor");
   console.log("==================================================");
 
-  const procs = findLanguageServer();
-  const endpoints = [
-    '/exa.language_server_pb.LanguageServerService/GetUserStatus',
-    '/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary',
-  ];
+  const conn = findLanguageServer();
+  if (!conn) {
+    console.log("Language Server not found!");
+    return;
+  }
 
-  const testPayloads = [
-    Buffer.alloc(0),
-    Buffer.from([0x0a, 0x00]),
-    Buffer.from([0x0a, 0x02, 0x08, 0x01]),
-    Buffer.from([0x0a, 0x0e, 0x0a, 0x0c, 0x61, 0x6e, 0x74, 0x69, 0x67, 0x72, 0x61, 0x76, 0x69, 0x74, 0x79]),
-  ];
+  const ports = Array.from(new Set([...(conn.extensionPort ? [conn.extensionPort] : []), ...conn.listeningPorts]));
 
-  for (const proc of procs) {
-    if (!proc.csrfToken) continue;
-    const ports = Array.from(new Set([...(proc.extensionPort ? [proc.extensionPort] : []), ...proc.listeningPorts]));
-
-    for (const port of ports) {
-      for (const isHttps of [false, true]) {
-        for (const ep of endpoints) {
-          for (let i = 0; i < testPayloads.length; i++) {
-            const res = await fetchGrpcWeb(isHttps, port, ep, proc.csrfToken, testPayloads[i]);
-            if (res.status === 200 && res.data.length > 0) {
-              console.log(`\n🎉 SUCCESS! Endpoint: ${ep} on ${isHttps ? 'HTTPS' : 'HTTP'}:${port} (Payload #${i}) -> Received ${res.data.length} bytes!`);
-              parseGrpcWebFrames(res.data);
-            }
-          }
-        }
+  for (const port of ports) {
+    for (const isHttps of [false, true]) {
+      const buf = await fetchQuotaFromPort(isHttps, port, conn.csrfToken);
+      if (buf && buf.length > 0) {
+        const snapshot = parseQuotaProtobufResponse(buf);
+        console.log("\nPARSED LIVE QUOTA SNAPSHOT:");
+        console.log(JSON.stringify(snapshot, null, 2));
+        return;
       }
     }
   }
-
-  console.log("\n==================================================");
-  console.log(" Probe Finished.");
-  console.log("==================================================");
 }
 
 main();
