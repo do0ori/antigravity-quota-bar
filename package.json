@@ -1,36 +1,45 @@
 {
-  "name": "antigravity-model-quota",
-  "displayName": "Antigravity Model Quota Indicator",
-  "description": "Show Gemini & Claude/GPT Weekly and 5-Hour Model Quota in Status Bar",
+  "name": "antigravity-quota-bar",
+  "displayName": "Antigravity Group Quota Bar",
+  "description": "Monitor Gemini and Claude/GPT weekly and five-hour quotas from the status bar.",
   "version": "0.1.0",
+  "publisher": "do0ori",
+  "license": "MIT",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onStartupFinished"
+  "keywords": [
+    "antigravity",
+    "quota",
+    "gemini",
+    "claude",
+    "gpt",
+    "status bar"
   ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "antigravityQuota.refresh",
-        "title": "Antigravity Quota: Refresh"
-      }
-    ]
+  "icon": "images/icon.svg",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/do0ori/antigravity-quota-bar"
   },
+  "main": "./out/extension.js",
   "scripts": {
-    "probe": "tsx scripts/probe-quota.ts",
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --allow-missing-repository",
+    "publish:vscode": "vsce publish",
+    "publish:openvsx": "ovsx publish",
+    "publish:all": "npm run publish:vscode && npm run publish:openvsx"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/vscode": "^1.85.0",
-    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^3.2.1",
+    "ovsx": "^0.9.1",
+    "typescript": "^5.0.0",
     "tsx": "^4.7.0"
   }
 }

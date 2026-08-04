@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
   console.log('Antigravity Model Quota extension activated.');
 
   const quotaClient = new QuotaClient();
-  const statusBar = new QuotaStatusBar();
+  const statusBar = new QuotaStatusBar(context.extensionPath);
 
   async function updateQuota() {
     try {
