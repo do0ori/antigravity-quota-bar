@@ -91,16 +91,17 @@ function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): 
   });
 }
 
-function parseSectionQuota(buf: Buffer, sectionId: string): { percentage: number; resetText?: string } {
+function parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string } {
   const idx = buf.indexOf(sectionId);
   if (idx === -1) {
     return { percentage: 100 };
   }
 
-  const sub = buf.subarray(idx, Math.min(buf.length, idx + 350));
+  const endIdx = nextSectionId ? buf.indexOf(nextSectionId, idx) : -1;
+  const sub = endIdx !== -1 ? buf.subarray(idx, endIdx) : buf.subarray(idx, Math.min(buf.length, idx + 250));
   const subStr = sub.toString('utf8');
 
-  // Extract Reset Text
+  // 1. Extract Reset Text
   let resetText: string | undefined = undefined;
   const resetMatch = subStr.match(/refresh in ([0-9]+ [a-z]+(?:, [0-9]+ [a-z]+)?)/i);
   if (resetMatch) {
@@ -114,19 +115,13 @@ function parseSectionQuota(buf: Buffer, sectionId: string): { percentage: number
       .replace(/,\s*/g, ' ');
   }
 
-  let percentage = 100;
-
-  // 1. Try text percentage match (e.g. "%65" or "65%")
-  const pctTextMatch = subStr.match(/%([0-9]{1,3})|([0-9]{1,3})%/);
-  if (pctTextMatch) {
-    const val = parseInt(pctTextMatch[1] || pctTextMatch[2], 10);
-    if (!isNaN(val) && val >= 0 && val <= 100) {
-      percentage = val;
-      return { percentage, resetText };
-    }
+  // 2. Check if limit is hit in THIS section's text
+  if (subStr.includes('hit your')) {
+    return { percentage: 0, resetText };
   }
 
-  // 2. Try binary IEEE 754 float
+  // 3. Extract percentage float from binary
+  let percentage = 100;
   for (let i = 0; i <= sub.length - 4; i++) {
     const flt = sub.readFloatLE(i);
     if (!isNaN(flt) && flt > 0.001 && flt < 0.999) {
@@ -139,10 +134,10 @@ function parseSectionQuota(buf: Buffer, sectionId: string): { percentage: number
 }
 
 export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
-  const geminiWeekly = parseSectionQuota(buf, 'gemini-weekly');
-  const gemini5h = parseSectionQuota(buf, 'gemini-5h');
-  const claudeWeekly = parseSectionQuota(buf, '3p-weekly');
-  const claude5h = parseSectionQuota(buf, '3p-5h');
+  const geminiWeekly = parseSectionQuota(buf, 'gemini-weekly', 'gemini-5h');
+  const gemini5h = parseSectionQuota(buf, 'gemini-5h', '3p-weekly');
+  const claudeWeekly = parseSectionQuota(buf, '3p-weekly', '3p-5h');
+  const claude5h = parseSectionQuota(buf, '3p-5h', 'Claude and GPT models');
 
   return {
     gemini: {
@@ -164,7 +159,7 @@ export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
 
 async function main() {
   console.log("==================================================");
-  console.log(" Testing Live Percentage & Reset Extractor");
+  console.log(" Testing Precise Section Boundary Parser");
   console.log("==================================================");
 
   const conn = findLanguageServer();
