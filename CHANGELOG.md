@@ -10,3 +10,4 @@ All notable changes to the "Antigravity Group Quota Bar" extension will be docum
 - **Rich Hover Tooltip**: Pixel-perfect HTML grid layout rendering 100-percentage theme-transparent SVG progress bars.
 - **Robust Language Server Probe**: Local win32 process and port scanner with CSRF token authentication (`x-codeium-csrf-token`).
 - **Privacy First**: 100% local communication with zero external network requests or credential transmission.
+- **Documentation**: Includes Korean (`README.ko.md`) and English documentation with GitHub badge navigation.
