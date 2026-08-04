@@ -30,7 +30,7 @@ export class QuotaStatusBar {
     // Seamless background blending
     this.statusBarItem.backgroundColor = undefined;
 
-    // Borderless HTML table with white-space:nowrap to prevent text wrapping
+    // Hover Tooltip using <div> flex layout (avoids VS Code table border stylesheet injection)
     const tooltip = new vscode.MarkdownString();
     tooltip.isTrusted = true;
     tooltip.supportHtml = true;
@@ -43,43 +43,46 @@ export class QuotaStatusBar {
     const cWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.weeklyPercent, 110, 8);
     const c5hBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.fiveHourPercent, 110, 8);
 
-    const tdStyle = `border:none; white-space:nowrap; padding:2px 0;`;
-    const tdBarStyle = `border:none; white-space:nowrap; padding:2px 6px;`;
+    const flexRowStyle = `display:flex; align-items:center; white-space:nowrap; margin:3px 0; font-size:12px;`;
+    const labelStyle = `display:inline-block; width:92px; font-weight:bold; white-space:nowrap;`;
+    const barStyle = `display:inline-block; margin:0 6px; vertical-align:middle;`;
+    const pctStyle = `display:inline-block; width:36px; text-align:right; font-weight:bold; white-space:nowrap;`;
+    const timeStyle = `display:inline-block; color:#888; margin-left:8px; font-style:italic; white-space:nowrap;`;
 
     const htmlContent = `
-<h4 style="margin:0 0 4px 0; white-space:nowrap;">✨ Gemini Models</h4>
-<table style="border:none; border-collapse:collapse; margin-bottom:8px; width:auto;">
-  <tr>
-    <td width="96" style="${tdStyle}"><b>Weekly Limit</b></td>
-    <td style="${tdBarStyle}"><img src="${gWeeklyBar}" align="center" /></td>
-    <td width="40" align="right" style="${tdStyle}"><b>${gemini.weeklyPercent}%</b></td>
-    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${gemini.weeklyResetText ? `(${gemini.weeklyResetText})` : ''}</i></td>
-  </tr>
-  <tr>
-    <td width="96" style="${tdStyle}"><b>5-Hour Limit</b></td>
-    <td style="${tdBarStyle}"><img src="${g5hBar}" align="center" /></td>
-    <td width="40" align="right" style="${tdStyle}"><b>${gemini.fiveHourPercent}%</b></td>
-    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${gemini.fiveHourResetText ? `(${gemini.fiveHourResetText})` : ''}</i></td>
-  </tr>
-</table>
+<h4 style="margin:0 0 6px 0; white-space:nowrap;">✨ Gemini Models</h4>
+<div style="display:flex; flex-direction:column; margin-bottom:10px;">
+  <div style="${flexRowStyle}">
+    <span style="${labelStyle}">Weekly Limit</span>
+    <span style="${barStyle}"><img src="${gWeeklyBar}" align="center" /></span>
+    <span style="${pctStyle}">${gemini.weeklyPercent}%</span>
+    <span style="${timeStyle}">${gemini.weeklyResetText ? `(${gemini.weeklyResetText})` : ''}</span>
+  </div>
+  <div style="${flexRowStyle}">
+    <span style="${labelStyle}">5-Hour Limit</span>
+    <span style="${barStyle}"><img src="${g5hBar}" align="center" /></span>
+    <span style="${pctStyle}">${gemini.fiveHourPercent}%</span>
+    <span style="${timeStyle}">${gemini.fiveHourResetText ? `(${gemini.fiveHourResetText})` : ''}</span>
+  </div>
+</div>
 
-<h4 style="margin:8px 0 4px 0; white-space:nowrap;">🤖 Claude and GPT models</h4>
-<table style="border:none; border-collapse:collapse; width:auto;">
-  <tr>
-    <td width="96" style="${tdStyle}"><b>Weekly Limit</b></td>
-    <td style="${tdBarStyle}"><img src="${cWeeklyBar}" align="center" /></td>
-    <td width="40" align="right" style="${tdStyle}"><b>${claudeGpt.weeklyPercent}%</b></td>
-    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${claudeGpt.weeklyResetText ? `(${claudeGpt.weeklyResetText})` : ''}</i></td>
-  </tr>
-  <tr>
-    <td width="96" style="${tdStyle}"><b>5-Hour Limit</b></td>
-    <td style="${tdBarStyle}"><img src="${c5hBar}" align="center" /></td>
-    <td width="40" align="right" style="${tdStyle}"><b>${claudeGpt.fiveHourPercent}%</b></td>
-    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${claudeGpt.fiveHourResetText ? `(${claudeGpt.fiveHourResetText})` : ''}</i></td>
-  </tr>
-</table>
+<h4 style="margin:10px 0 6px 0; white-space:nowrap;">🤖 Claude and GPT models</h4>
+<div style="display:flex; flex-direction:column;">
+  <div style="${flexRowStyle}">
+    <span style="${labelStyle}">Weekly Limit</span>
+    <span style="${barStyle}"><img src="${cWeeklyBar}" align="center" /></span>
+    <span style="${pctStyle}">${claudeGpt.weeklyPercent}%</span>
+    <span style="${timeStyle}">${claudeGpt.weeklyResetText ? `(${claudeGpt.weeklyResetText})` : ''}</span>
+  </div>
+  <div style="${flexRowStyle}">
+    <span style="${labelStyle}">5-Hour Limit</span>
+    <span style="${barStyle}"><img src="${c5hBar}" align="center" /></span>
+    <span style="${pctStyle}">${claudeGpt.fiveHourPercent}%</span>
+    <span style="${timeStyle}">${claudeGpt.fiveHourResetText ? `(${claudeGpt.fiveHourResetText})` : ''}</span>
+  </div>
+</div>
 
-<hr style="margin:8px 0 4px 0; border:0; border-top:1px solid rgba(128,128,128,0.3);"/>
+<hr style="margin:10px 0 4px 0; border:0; border-top:1px solid rgba(128,128,128,0.3);"/>
 <div style="font-size:10px; color:#888; white-space:nowrap;">Updated ${snapshot.fetchedAt.toLocaleTimeString()} • Click to refresh</div>
 `;
 
