@@ -1,0 +1,36 @@
+{
+  "name": "antigravity-model-quota",
+  "displayName": "Antigravity Model Quota Indicator",
+  "description": "Show Gemini & Claude/GPT Weekly and 5-Hour Model Quota in Status Bar",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravityQuota.refresh",
+        "title": "Antigravity Quota: Refresh"
+      }
+    ]
+  },
+  "scripts": {
+    "probe": "tsx scripts/probe-quota.ts",
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.7.0"
+  }
+}
