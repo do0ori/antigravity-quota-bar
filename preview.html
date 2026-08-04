@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Antigravity Quota Status Bar & Tooltip Preview</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #cccccc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 40px;
+    }
+    .card {
+      background-color: #252526;
+      border: 1px solid #3c3c3c;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 550px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    h2 { margin-top: 0; color: #ffffff; font-size: 18px; border-bottom: 1px solid #3c3c3c; padding-bottom: 8px; }
+    .status-bar-mock {
+      background-color: #181818;
+      border: 1px solid #333;
+      color: #ffffff;
+      padding: 6px 14px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .tooltip-mock {
+      background-color: #252526;
+      border: 1px solid #454545;
+      border-radius: 6px;
+      padding: 18px;
+      margin-top: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    .time { color: #888; font-style: italic; font-size: 12px; }
+    .pct { font-weight: bold; width: 40px; }
+  </style>
+</head>
+<body>
+
+  <h1>⚡ Antigravity Model Quota UI Preview</h1>
+  <p>상태바에는 원형 링(Circle Ring)이 직접 표기되고, 마우스 호버 시에는 수평 SVG Progress Bar(100분율)가 표시됩니다.</p>
+
+  <div class="card">
+    <h2>1. 하단 상태바 (Status Bar Item Preview)</h2>
+    <div class="status-bar-mock">
+      <span>✨ ◑63% ◕78%</span>
+      <span style="color:#555;">│</span>
+      <span>🤖 ◔33% ◯0%</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. 마우스 호버 툴팁 (Hover Tooltip with 100-Percentage SVG Progress Bars)</h2>
+    <div class="tooltip-mock">
+      <h3 style="margin-top:0; color:#fff;">⚡ Antigravity Model Quota Status</h3>
+      
+      <h4 style="color:#60a5fa; margin-bottom:8px;">✨ Gemini Models</h4>
+      <div class="row">
+        <strong style="width:100px;">Weekly Limit:</strong>
+        <!-- SVG Progress Bar -->
+        <svg width="140" height="10" viewBox="0 0 140 10"><rect width="140" height="10" rx="5" fill="#374151"/><rect width="88.2" height="10" rx="5" fill="#10B981"/></svg>
+        <span class="pct">63%</span>
+        <span class="time">(Refreshes in 6d 12h)</span>
+      </div>
+
+      <div class="row">
+        <strong style="width:100px;">5-Hour Limit:</strong>
+        <svg width="140" height="10" viewBox="0 0 140 10"><rect width="140" height="10" rx="5" fill="#374151"/><rect width="109.2" height="10" rx="5" fill="#10B981"/></svg>
+        <span class="pct">78%</span>
+        <span class="time">(Refreshes in 4h 2m)</span>
+      </div>
+
+      <h4 style="color:#a78bfa; margin-bottom:8px; margin-top:16px;">🤖 Claude and GPT models</h4>
+      <div class="row">
+        <strong style="width:100px;">Weekly Limit:</strong>
+        <svg width="140" height="10" viewBox="0 0 140 10"><rect width="140" height="10" rx="5" fill="#374151"/><rect width="46.2" height="10" rx="5" fill="#F59E0B"/></svg>
+        <span class="pct">33%</span>
+        <span class="time">(Refreshes in 32m)</span>
+      </div>
+
+      <div class="row">
+        <strong style="width:100px;">5-Hour Limit:</strong>
+        <svg width="140" height="10" viewBox="0 0 140 10"><rect width="140" height="10" rx="5" fill="#374151"/><rect width="0" height="10" rx="5" fill="#EF4444"/></svg>
+        <span class="pct" style="color:#ef4444;">0%</span>
+        <span class="time">(Refreshes in 32m)</span>
+      </div>
+
+      <hr style="border-color:#3c3c3c; margin-top:16px;">
+      <div style="font-size:11px; color:#888;">Updated 9:55:00 PM • Click status bar to refresh</div>
+    </div>
+  </div>
+
+</body>
+</html>
