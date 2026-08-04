@@ -30,7 +30,7 @@ export class QuotaStatusBar {
     // Seamless background blending
     this.statusBarItem.backgroundColor = undefined;
 
-    // Compact, tight-gap HTML table for pixel-perfect hover tooltip alignment
+    // Borderless HTML table with white-space:nowrap to prevent text wrapping
     const tooltip = new vscode.MarkdownString();
     tooltip.isTrusted = true;
     tooltip.supportHtml = true;
@@ -43,41 +43,44 @@ export class QuotaStatusBar {
     const cWeeklyBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.weeklyPercent, 110, 8);
     const c5hBar = SvgGenerator.createProgressBarSvgDataUri(claudeGpt.fiveHourPercent, 110, 8);
 
+    const tdStyle = `border:none; white-space:nowrap; padding:2px 0;`;
+    const tdBarStyle = `border:none; white-space:nowrap; padding:2px 6px;`;
+
     const htmlContent = `
-<h4 style="margin:0 0 4px 0;">✨ Gemini Models</h4>
-<table border="0" cellpadding="1" cellspacing="0" style="margin-bottom:8px;">
+<h4 style="margin:0 0 4px 0; white-space:nowrap;">✨ Gemini Models</h4>
+<table style="border:none; border-collapse:collapse; margin-bottom:8px; width:auto;">
   <tr>
-    <td width="92"><b>Weekly Limit</b></td>
-    <td><img src="${gWeeklyBar}" align="center" /></td>
-    <td width="36" align="right"><b>${gemini.weeklyPercent}%</b></td>
-    <td style="color:#888; padding-left:6px;"><i>${gemini.weeklyResetText ? `(${gemini.weeklyResetText})` : ''}</i></td>
+    <td width="96" style="${tdStyle}"><b>Weekly Limit</b></td>
+    <td style="${tdBarStyle}"><img src="${gWeeklyBar}" align="center" /></td>
+    <td width="40" align="right" style="${tdStyle}"><b>${gemini.weeklyPercent}%</b></td>
+    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${gemini.weeklyResetText ? `(${gemini.weeklyResetText})` : ''}</i></td>
   </tr>
   <tr>
-    <td width="92"><b>5-Hour Limit</b></td>
-    <td><img src="${g5hBar}" align="center" /></td>
-    <td width="36" align="right"><b>${gemini.fiveHourPercent}%</b></td>
-    <td style="color:#888; padding-left:6px;"><i>${gemini.fiveHourResetText ? `(${gemini.fiveHourResetText})` : ''}</i></td>
-  </tr>
-</table>
-
-<h4 style="margin:8px 0 4px 0;">🤖 Claude and GPT models</h4>
-<table border="0" cellpadding="1" cellspacing="0">
-  <tr>
-    <td width="92"><b>Weekly Limit</b></td>
-    <td><img src="${cWeeklyBar}" align="center" /></td>
-    <td width="36" align="right"><b>${claudeGpt.weeklyPercent}%</b></td>
-    <td style="color:#888; padding-left:6px;"><i>${claudeWeeklyResetText(claudeGpt.weeklyResetText)}</i></td>
-  </tr>
-  <tr>
-    <td width="92"><b>5-Hour Limit</b></td>
-    <td><img src="${c5hBar}" align="center" /></td>
-    <td width="36" align="right"><b>${claudeGpt.fiveHourPercent}%</b></td>
-    <td style="color:#888; padding-left:6px;"><i>${claudeGpt.fiveHourResetText ? `(${claudeGpt.fiveHourResetText})` : ''}</i></td>
+    <td width="96" style="${tdStyle}"><b>5-Hour Limit</b></td>
+    <td style="${tdBarStyle}"><img src="${g5hBar}" align="center" /></td>
+    <td width="40" align="right" style="${tdStyle}"><b>${gemini.fiveHourPercent}%</b></td>
+    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${gemini.fiveHourResetText ? `(${gemini.fiveHourResetText})` : ''}</i></td>
   </tr>
 </table>
 
-<hr style="margin:8px 0 4px 0; border:0; border-top:1px solid #3c3c3c;"/>
-<div style="font-size:10px; color:#888;">Updated ${snapshot.fetchedAt.toLocaleTimeString()} • Click to refresh</div>
+<h4 style="margin:8px 0 4px 0; white-space:nowrap;">🤖 Claude and GPT models</h4>
+<table style="border:none; border-collapse:collapse; width:auto;">
+  <tr>
+    <td width="96" style="${tdStyle}"><b>Weekly Limit</b></td>
+    <td style="${tdBarStyle}"><img src="${cWeeklyBar}" align="center" /></td>
+    <td width="40" align="right" style="${tdStyle}"><b>${claudeGpt.weeklyPercent}%</b></td>
+    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${claudeGpt.weeklyResetText ? `(${claudeGpt.weeklyResetText})` : ''}</i></td>
+  </tr>
+  <tr>
+    <td width="96" style="${tdStyle}"><b>5-Hour Limit</b></td>
+    <td style="${tdBarStyle}"><img src="${c5hBar}" align="center" /></td>
+    <td width="40" align="right" style="${tdStyle}"><b>${claudeGpt.fiveHourPercent}%</b></td>
+    <td style="${tdStyle} color:#888; padding-left:8px;"><i>${claudeGpt.fiveHourResetText ? `(${claudeGpt.fiveHourResetText})` : ''}</i></td>
+  </tr>
+</table>
+
+<hr style="margin:8px 0 4px 0; border:0; border-top:1px solid rgba(128,128,128,0.3);"/>
+<div style="font-size:10px; color:#888; white-space:nowrap;">Updated ${snapshot.fetchedAt.toLocaleTimeString()} • Click to refresh</div>
 `;
 
     tooltip.appendMarkdown(htmlContent);
@@ -92,9 +95,4 @@ export class QuotaStatusBar {
   public dispose(): void {
     this.statusBarItem.dispose();
   }
-}
-
-function claudeWeeklyResetText(text?: string): string {
-  if (!text) return '';
-  return `(${text})`;
 }
