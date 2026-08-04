@@ -19,7 +19,10 @@
     "gpt",
     "status bar"
   ],
-  "icon": "images/icon.svg",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/do0ori/antigravity-quota-bar"
@@ -29,7 +32,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package --allow-missing-repository",
+    "package": "npx @vscode/vsce package --allow-missing-repository",
     "publish:vscode": "vsce publish",
     "publish:openvsx": "ovsx publish",
     "publish:all": "npm run publish:vscode && npm run publish:openvsx"
