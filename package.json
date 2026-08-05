@@ -2,7 +2,7 @@
   "name": "antigravity-quota-bar",
   "displayName": "Antigravity Group Quota Bar",
   "description": "Monitor Gemini and Claude/GPT weekly and five-hour quotas from the status bar.",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "publisher": "do0ori",
   "license": "MIT",
   "engines": {
@@ -22,6 +22,31 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "antigravityQuota.refresh",
+        "title": "Antigravity Quota: Refresh"
+      }
+    ],
+    "configuration": {
+      "title": "Antigravity Quota Bar",
+      "properties": {
+        "antigravityQuota.refreshInterval": {
+          "type": "integer",
+          "default": 30,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Auto-refresh interval in seconds for model quota monitoring."
+        },
+        "antigravityQuota.enableSmartRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh quota shortly after editor code changes or saves."
+        }
+      }
+    }
+  },
   "icon": "images/icon.png",
   "repository": {
     "type": "git",

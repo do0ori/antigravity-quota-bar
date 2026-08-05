@@ -15,7 +15,17 @@ Monitor your **Gemini** and **Claude / GPT** 4-group weekly and 5-hour quotas di
 - **Minimalist Status Bar Indicator**: Displays current 5-hour limit percentages in an elegant, non-distracting style (`✨ 78% │ 🤖 0%`).
 - **Pixel-Perfect Hover Tooltip**: Hovering over the status bar opens a theme-adaptive HTML grid with 100-percentage SVG progress bars.
 - **Accurate Hit-Limit Parser**: Correctly parses weekly limits even when 5-hour limits are currently active (`You have hit your 5-hour limit, so the weekly limit does not currently apply`).
+- **Configurable Auto-Polling & Smart Refresh**: Auto-refreshes every 30 seconds (configurable) and automatically updates right after you use AI models in the editor.
 - **100% Private & Local**: Communicates strictly with your local Antigravity Language Server (`127.0.0.1`). Zero external data transmission.
+
+---
+
+## ⚙️ Extension Settings
+
+| Setting | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `antigravityQuota.refreshInterval` | `integer` | `30` | Auto-refresh interval in seconds (min: 10, max: 300). |
+| `antigravityQuota.enableSmartRefresh` | `boolean` | `true` | Smart refresh shortly after editor code edits or saves. |
 
 ---
 
