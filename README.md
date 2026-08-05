@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Korean README](https://img.shields.io/badge/Language-%ED%95%9C%EA%B5%AD%EC%96%B4-green.svg)](https://github.com/do0ori/antigravity-quota-bar/blob/main/README.ko.md)
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
 
 Monitor your **Gemini** and **Claude / GPT** 4-group weekly and 5-hour quotas directly in the VS Code / Antigravity IDE Status Bar.
 
@@ -44,14 +45,6 @@ Search for **`Antigravity Group Quota Bar`** in the Extensions view (`Ctrl + Shi
 ## 🔒 Privacy & Security
 
 This extension runs completely offline relative to third-party servers. All gRPC-Web quota retrieval happens locally via `127.0.0.1` using locally authenticated CSRF tokens.
-
-## 💳 Support
-
-If this extension saves your time and improves your workflow, consider supporting the development!
-
-[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
-
-- **PayPal**: [paypal.me/do0ori](https://www.paypal.com/paypalme/do0ori)
 
 ---
 

@@ -2,6 +2,12 @@
 
 All notable changes to the "Antigravity Group Quota Bar" extension will be documented in this file.
 
+## [0.2.1] - 2026-08-05
+
+### Changed
+- **Documentation**: Placed PayPal donation badge cleanly in the top header badges list.
+- **Minimum Refresh Guardrail**: Set minimum refresh interval validation guardrail to 10 seconds.
+
 ## [0.2.0] - 2026-08-05
 
 ### Added

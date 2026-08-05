@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![English README](https://img.shields.io/badge/Language-English-blue.svg)](https://github.com/do0ori/antigravity-quota-bar/blob/main/README.md)
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
 
 Antigravity IDE의 **Gemini** 및 **Claude / GPT** 4가지 Group Quota(주간 및 5시간 한도) 상태를 하단 상태바에서 실시간으로 직관적으로 확인할 수 있는 초경량 확장 프로그램입니다.
 
@@ -46,14 +47,6 @@ VS Code 또는 Antigravity IDE 확장에 들어가서 **`Antigravity Group Quota
 ## 🔒 개인정보 및 보안 정책
 
 이 확장 프로그램은 오직 사용자 로컬 시스템의 `127.0.0.1` gRPC-Web 엔드포인트와만 통신합니다. 원격 추적 및 원격 의존성이 전혀 없는 100% 안심 안전 소프트웨어입니다.
-
-## 💳 후원하기 (Support)
-
-이 확장 프로그램이 유용하셨다면 개발자를 후원해 주세요!
-
-[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
-
-- **PayPal**: [paypal.me/do0ori](https://www.paypal.com/paypalme/do0ori)
 
 ---
 
