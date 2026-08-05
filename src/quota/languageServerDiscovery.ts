@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import * as os from 'os';
 
 export interface LanguageServerConnection {
   pid: number;
@@ -9,23 +10,33 @@ export interface LanguageServerConnection {
 
 export class LanguageServerDiscovery {
   public static discover(): LanguageServerConnection | null {
-    try {
-      const wmicOut = execSync('wmic process where "name like \'%language_server%\'" get processid,commandline /format:csv', { encoding: 'utf-8' });
-      const lines = wmicOut.split(/\r?\n/).filter(line => line.trim() && !line.startsWith('Node,CommandLine'));
-      
-      for (const line of lines) {
-        const parts = line.split(',');
-        if (parts.length < 3) continue;
-        
-        const pidStr = parts[parts.length - 1].trim();
-        const pid = parseInt(pidStr, 10);
-        const commandLine = parts.slice(1, parts.length - 1).join(',');
+    const isWindows = os.platform() === 'win32';
+    if (isWindows) {
+      return this.discoverWindows();
+    } else {
+      return this.discoverPosix();
+    }
+  }
 
-        if (!pid || isNaN(pid)) continue;
+  private static discoverWindows(): LanguageServerConnection | null {
+    try {
+      const tasklistOut = execSync('tasklist /FI "IMAGENAME eq language_server*" /FO CSV /NH', { encoding: 'utf-8' }).trim();
+      if (!tasklistOut || tasklistOut.includes('No tasks')) return null;
+
+      const lines = tasklistOut.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        const parts = line.split('","').map(p => p.replace(/"/g, ''));
+        if (parts.length < 2) continue;
+        const pid = parseInt(parts[1], 10);
+        if (!pid) continue;
+
+        let commandLine = '';
+        try {
+          commandLine = execSync(`powershell -NoProfile -Command "(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine"`, { encoding: 'utf-8' }).trim();
+        } catch (e) {}
 
         const csrfMatch = commandLine.match(/--csrf_token\s+([a-f0-9\-]+)/i);
         const csrfToken = csrfMatch ? csrfMatch[1] : undefined;
-
         if (!csrfToken) continue;
 
         const extPortMatch = commandLine.match(/--extension_server_port\s+(\d+)/i);
@@ -33,23 +44,53 @@ export class LanguageServerDiscovery {
 
         let listeningPorts: number[] = [];
         try {
-          const netCmd = `powershell -NoProfile -Command "Get-NetTCPConnection -State Listen -OwningProcess ${pid} -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalPort"`;
-          const netOut = execSync(netCmd, { encoding: 'utf-8' }).trim();
+          const netOut = execSync(`powershell -NoProfile -Command "(Get-NetTCPConnection -State Listen -OwningProcess ${pid} -ErrorAction SilentlyContinue).LocalPort"`, { encoding: 'utf-8' }).trim();
           if (netOut) {
             listeningPorts = netOut.split(/\r?\n/).map(p => parseInt(p.trim(), 10)).filter(Boolean);
           }
         } catch (e) {}
 
-        return {
-          pid,
-          csrfToken,
-          extensionPort,
-          listeningPorts
-        };
+        return { pid, csrfToken, extensionPort, listeningPorts };
       }
-    } catch (e) {
-      // Fallback or error logging
-    }
+    } catch (e) {}
+    return null;
+  }
+
+  private static discoverPosix(): LanguageServerConnection | null {
+    try {
+      const psOut = execSync('ps aux | grep language_server | grep -v grep', { encoding: 'utf-8' }).trim();
+      if (!psOut) return null;
+
+      const lines = psOut.split(/\r?\n/).filter(Boolean);
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 11) continue;
+        const pid = parseInt(parts[1], 10);
+        if (!pid) continue;
+
+        const commandLine = parts.slice(10).join(' ');
+        const csrfMatch = commandLine.match(/--csrf_token\s+([a-f0-9\-]+)/i);
+        const csrfToken = csrfMatch ? csrfMatch[1] : undefined;
+        if (!csrfToken) continue;
+
+        const extPortMatch = commandLine.match(/--extension_server_port\s+(\d+)/i);
+        const extensionPort = extPortMatch ? parseInt(extPortMatch[1], 10) : undefined;
+
+        let listeningPorts: number[] = [];
+        try {
+          const lsofOut = execSync(`lsof -a -iTCP -sTCP:LISTEN -p ${pid} -Fn 2>/dev/null`, { encoding: 'utf-8' }).trim();
+          if (lsofOut) {
+            const portMatches = lsofOut.match(/:(\d+)/g);
+            if (portMatches) {
+              listeningPorts = portMatches.map(p => parseInt(p.replace(':', ''), 10)).filter(Boolean);
+            }
+          }
+        } catch (e) {}
+
+        return { pid, csrfToken, extensionPort, listeningPorts };
+      }
+    } catch (e) {}
     return null;
   }
 }
+
