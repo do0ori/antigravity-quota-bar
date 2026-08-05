@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      OVSX_TOKEN: ${{ secrets.OVSX_ACCESS_TOKEN }}
+      VSCODE_PAT: ${{ secrets.VSCODE_MARKETPLACE_PAT }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -32,15 +35,11 @@ jobs:
         run: npx @vscode/vsce package --allow-missing-repository
 
       - name: Publish to Open VSX Registry
-        if: ${{ secrets.OVSX_ACCESS_TOKEN != '' }}
-        env:
-          OVSX_TOKEN: ${{ secrets.OVSX_ACCESS_TOKEN }}
+        if: env.OVSX_TOKEN != ''
         run: npx ovsx publish -p "$OVSX_TOKEN"
 
       - name: Publish to VS Code Marketplace
-        if: ${{ secrets.VSCODE_MARKETPLACE_PAT != '' }}
-        env:
-          VSCODE_PAT: ${{ secrets.VSCODE_MARKETPLACE_PAT }}
+        if: env.VSCODE_PAT != ''
         run: npx @vscode/vsce publish -p "$VSCODE_PAT"
 
       - name: Create GitHub Release
