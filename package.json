@@ -2,7 +2,7 @@
   "name": "antigravity-quota-bar",
   "displayName": "Antigravity Group Quota Bar",
   "description": "Monitor Gemini and Claude/GPT weekly and five-hour quotas from the status bar.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "do0ori",
   "license": "MIT",
   "engines": {

@@ -64,16 +64,15 @@ export class LanguageServerDiscovery {
       const lines = psOut.split(/\r?\n/).filter(Boolean);
       for (const line of lines) {
         const parts = line.trim().split(/\s+/);
-        if (parts.length < 11) continue;
+        if (parts.length < 2) continue;
         const pid = parseInt(parts[1], 10);
         if (!pid) continue;
 
-        const commandLine = parts.slice(10).join(' ');
-        const csrfMatch = commandLine.match(/--csrf_token\s+([a-f0-9\-]+)/i);
+        const csrfMatch = line.match(/--csrf_token\s+([a-f0-9\-]+)/i);
         const csrfToken = csrfMatch ? csrfMatch[1] : undefined;
         if (!csrfToken) continue;
 
-        const extPortMatch = commandLine.match(/--extension_server_port\s+(\d+)/i);
+        const extPortMatch = line.match(/--extension_server_port\s+(\d+)/i);
         const extensionPort = extPortMatch ? parseInt(extPortMatch[1], 10) : undefined;
 
         let listeningPorts: number[] = [];
