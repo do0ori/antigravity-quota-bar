@@ -47,6 +47,14 @@ VS Code 또는 Antigravity IDE 확장에 들어가서 **`Antigravity Group Quota
 
 이 확장 프로그램은 오직 사용자 로컬 시스템의 `127.0.0.1` gRPC-Web 엔드포인트와만 통신합니다. 원격 추적 및 원격 의존성이 전혀 없는 100% 안심 안전 소프트웨어입니다.
 
+## 💳 후원하기 (Support)
+
+이 확장 프로그램이 유용하셨다면 개발자를 후원해 주세요!
+
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
+
+- **PayPal**: [paypal.me/do0ori](https://www.paypal.com/paypalme/do0ori)
+
 ---
 
 ## 📄 라이선스

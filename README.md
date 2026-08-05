@@ -45,6 +45,14 @@ Search for **`Antigravity Group Quota Bar`** in the Extensions view (`Ctrl + Shi
 
 This extension runs completely offline relative to third-party servers. All gRPC-Web quota retrieval happens locally via `127.0.0.1` using locally authenticated CSRF tokens.
 
+## 💳 Support
+
+If this extension saves your time and improves your workflow, consider supporting the development!
+
+[![Donate via PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg?logo=paypal)](https://www.paypal.com/paypalme/do0ori)
+
+- **PayPal**: [paypal.me/do0ori](https://www.paypal.com/paypalme/do0ori)
+
 ---
 
 ## 📄 License

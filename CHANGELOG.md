@@ -2,6 +2,17 @@
 
 All notable changes to the "Antigravity Group Quota Bar" extension will be documented in this file.
 
+## [0.2.0] - 2026-08-05
+
+### Added
+- **Configurable Refresh Interval**: Added `antigravityQuota.refreshInterval` setting (10s to 300s, default 30s).
+- **Smart Event-based Refresh**: Added `antigravityQuota.enableSmartRefresh` setting for debounced (3s) auto-refresh after editor code changes or saves.
+- **Support Section**: Added PayPalMe donation link in documentation.
+
+### Changed
+- **Default Polling Interval**: Reduced default auto-polling interval from 60s to 30s for enhanced responsiveness.
+- **Minimum Interval Guardrail**: Updated minimum refresh interval validation from 5s to 10s.
+
 ## [0.1.0] - 2026-08-04
 
 ### Added
