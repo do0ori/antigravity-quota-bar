@@ -117,13 +117,27 @@ export class QuotaClient {
       return { percentage: 0, resetText };
     }
 
-    // 3. Extract IEEE 754 Float from binary payload (0.0 to 1.0)
+    // 3. Extract IEEE 754 Float using Protobuf Field Tag 0x25 (Field 4, Wire Type 5)
     let percentage = 100;
-    for (let i = 0; i <= sub.length - 4; i++) {
-      const flt = sub.readFloatLE(i);
-      if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
-        percentage = Math.round(flt * 100);
-        break;
+    let tagIdx = -1;
+    while ((tagIdx = sub.indexOf(0x25, tagIdx + 1)) !== -1) {
+      if (tagIdx + 4 < sub.length) {
+        const flt = sub.readFloatLE(tagIdx + 1);
+        if (!isNaN(flt) && flt >= 0.0 && flt <= 1.0) {
+          percentage = Math.round(flt * 100);
+          break;
+        }
+      }
+    }
+
+    // Fallback if tag 0x25 is missing
+    if (tagIdx === -1) {
+      for (let i = 0; i <= sub.length - 4; i++) {
+        const flt = sub.readFloatLE(i);
+        if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
+          percentage = Math.round(flt * 100);
+          break;
+        }
       }
     }
 
