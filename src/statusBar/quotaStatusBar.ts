@@ -71,23 +71,15 @@ export class QuotaStatusBar {
       : '';
 
     const render5hRow = (m: typeof gemini, barUri: string) => {
-      // Priority 1: Plan itself does not have a 5-hour limit
-      if (!m.hasFiveHourLimit || m.fiveHourPercent === undefined) {
+      // 5-hour limit inactive, unapplicable, or weekly limit exhausted
+      if (!m.hasFiveHourLimit || m.fiveHourPercent === undefined || (m.hasWeeklyLimit && m.weeklyPercent === 0)) {
         return `
   <div style="${flexRowStyle}">
     <span style="${labelStyle}">5-Hour Limit</span>
-    <span style="${timeStyle}; margin-left:0;">N/A (No 5-hour limit)</span>
+    <span style="${timeStyle}; margin-left:0;">N/A (Not Applicable)</span>
   </div>`;
       }
-      // Priority 2: Weekly limit reached (5-hour limit temporarily disabled)
-      if (m.hasWeeklyLimit && m.weeklyPercent === 0) {
-        return `
-  <div style="${flexRowStyle}">
-    <span style="${labelStyle}">5-Hour Limit</span>
-    <span style="${timeStyle}; margin-left:0;">N/A (Weekly limit reached)</span>
-  </div>`;
-      }
-      // Priority 3: Active 5-hour limit
+      // Active 5-hour limit
       return `
   <div style="${flexRowStyle}">
     <span style="${labelStyle}">5-Hour Limit</span>
