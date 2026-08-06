@@ -1,12 +1,14 @@
-import { execSync } from 'child_process';
+import { LanguageServerDiscovery } from '../src/quota/languageServerDiscovery';
 import http from 'http';
 import https from 'https';
 
 export interface QuotaMetric {
   weeklyPercent: number;
   weeklyResetText?: string;
-  fiveHourPercent: number;
+  hasWeeklyLimit: boolean;
+  fiveHourPercent?: number;
   fiveHourResetText?: string;
+  hasFiveHourLimit: boolean;
 }
 
 export interface ModelQuotaSnapshot {
@@ -17,42 +19,92 @@ export interface ModelQuotaSnapshot {
   errorMessage?: string;
 }
 
-function findLanguageServer(): { pid: number; csrfToken: string; extensionPort?: number; listeningPorts: number[] } | null {
-  try {
-    const tasklistOut = execSync('tasklist /FI "IMAGENAME eq language_server_windows_x64.exe" /FO CSV /NH', { encoding: 'utf-8' }).trim();
-    if (!tasklistOut || tasklistOut.includes('No tasks')) return null;
+function parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string; exists: boolean } {
+  const idx = buf.indexOf(sectionId);
+  if (idx === -1) {
+    return { percentage: 100, exists: false };
+  }
 
-    const lines = tasklistOut.split(/\r?\n/).filter(Boolean);
-    for (const line of lines) {
-      const parts = line.split('","').map(p => p.replace(/"/g, ''));
-      if (parts.length < 2) continue;
-      const pid = parseInt(parts[1], 10);
-      if (!pid) continue;
+  const endIdx = nextSectionId ? buf.indexOf(nextSectionId, idx) : -1;
+  const sub = endIdx !== -1 ? buf.subarray(idx, endIdx) : buf.subarray(idx, Math.min(buf.length, idx + 250));
+  const subStr = sub.toString('utf8');
 
-      let commandLine = '';
-      try {
-        commandLine = execSync(`powershell -NoProfile -Command "(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}').CommandLine"`, { encoding: 'utf-8' }).trim();
-      } catch (e) {}
+  // Check if limit does not apply
+  if (subStr.includes('does not currently apply')) {
+    return { percentage: 100, exists: false };
+  }
 
-      const csrfMatch = commandLine.match(/--csrf_token\s+([a-f0-9\-]+)/i);
-      const csrfToken = csrfMatch ? csrfMatch[1] : undefined;
-      if (!csrfToken) continue;
+  // 1. Extract Reset Text
+  let resetText: string | undefined = undefined;
+  const resetMatch = subStr.match(/(?:will\s+|fully\s+)*refresh\s+in\s+([0-9]+\s+[a-z]+(?:,\s*[0-9]+\s+[a-z]+)?)/i) ||
+                     subStr.match(/in\s+([0-9]+\s+(?:days?|hours?|minutes?)(?:,\s*[0-9]+\s+(?:days?|hours?|minutes?))?)/i);
 
-      const extPortMatch = commandLine.match(/--extension_server_port\s+(\d+)/i);
-      const extensionPort = extPortMatch ? parseInt(extPortMatch[1], 10) : undefined;
+  if (resetMatch) {
+    resetText = resetMatch[1]
+      .replace(/\s*days?/gi, 'd')
+      .replace(/\s*hours?/gi, 'h')
+      .replace(/\s*minutes?/gi, 'm')
+      .replace(/,\s*/g, ' ');
+  }
 
-      let listeningPorts: number[] = [];
-      try {
-        const netOut = execSync(`powershell -NoProfile -Command "(Get-NetTCPConnection -State Listen -OwningProcess ${pid} -ErrorAction SilentlyContinue).LocalPort"`, { encoding: 'utf-8' }).trim();
-        if (netOut) {
-          listeningPorts = netOut.split(/\r?\n/).map(p => parseInt(p.trim(), 10)).filter(Boolean);
-        }
-      } catch (e) {}
+  // 2. Check if limit is hit (0%)
+  if (subStr.includes('hit your weekly limit') || subStr.includes('hit your 5-hour limit')) {
+    return { percentage: 0, resetText, exists: true };
+  }
 
-      return { pid, csrfToken, extensionPort, listeningPorts };
+  // 3. Extract IEEE 754 Float using Protobuf Field Tag 0x25 (Field 4, Wire Type 5)
+  let percentage = 100;
+  let tagIdx = -1;
+  while ((tagIdx = sub.indexOf(0x25, tagIdx + 1)) !== -1) {
+    if (tagIdx + 4 < sub.length) {
+      const flt = sub.readFloatLE(tagIdx + 1);
+      if (!isNaN(flt) && flt >= 0.0 && flt <= 1.0) {
+        percentage = Math.round(flt * 100);
+        break;
+      }
     }
-  } catch (e) {}
-  return null;
+  }
+
+  // Fallback if tag 0x25 is missing
+  if (tagIdx === -1) {
+    for (let i = 0; i <= sub.length - 4; i++) {
+      const flt = sub.readFloatLE(i);
+      if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
+        percentage = Math.round(flt * 100);
+        break;
+      }
+    }
+  }
+
+  return { percentage, resetText, exists: true };
+}
+
+export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
+  const geminiWeekly = parseSectionQuota(buf, 'gemini-weekly', 'gemini-5h');
+  const gemini5h = parseSectionQuota(buf, 'gemini-5h', '3p-weekly');
+  const claudeWeekly = parseSectionQuota(buf, '3p-weekly', '3p-5h');
+  const claude5h = parseSectionQuota(buf, '3p-5h', 'Claude and GPT models');
+
+  return {
+    gemini: {
+      weeklyPercent: geminiWeekly.percentage,
+      weeklyResetText: geminiWeekly.resetText,
+      hasWeeklyLimit: geminiWeekly.exists,
+      fiveHourPercent: gemini5h.exists ? gemini5h.percentage : undefined,
+      fiveHourResetText: gemini5h.exists ? gemini5h.resetText : undefined,
+      hasFiveHourLimit: gemini5h.exists
+    },
+    claudeGpt: {
+      weeklyPercent: claudeWeekly.percentage,
+      weeklyResetText: claudeWeekly.resetText,
+      hasWeeklyLimit: claudeWeekly.exists,
+      fiveHourPercent: claude5h.exists ? claude5h.percentage : undefined,
+      fiveHourResetText: claude5h.exists ? claude5h.resetText : undefined,
+      hasFiveHourLimit: claude5h.exists
+    },
+    fetchedAt: new Date(),
+    isAvailable: true
+  };
 }
 
 function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): Promise<Buffer | null> {
@@ -91,94 +143,12 @@ function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): 
   });
 }
 
-function parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string } {
-  const idx = buf.indexOf(sectionId);
-  if (idx === -1) {
-    return { percentage: 100 };
-  }
-
-  const endIdx = nextSectionId ? buf.indexOf(nextSectionId, idx) : -1;
-  const sub = endIdx !== -1 ? buf.subarray(idx, endIdx) : buf.subarray(idx, Math.min(buf.length, idx + 250));
-  const subStr = sub.toString('utf8');
-
-  // 1. Extract Reset Text
-  let resetText: string | undefined = undefined;
-  const resetMatch = subStr.match(/refresh in ([0-9]+ [a-z]+(?:, [0-9]+ [a-z]+)?)/i);
-  if (resetMatch) {
-    resetText = resetMatch[1]
-      .replace(' days', 'd')
-      .replace(' day', 'd')
-      .replace(' hours', 'h')
-      .replace(' hour', 'h')
-      .replace(' minutes', 'm')
-      .replace(' minute', 'm')
-      .replace(/,\s*/g, ' ');
-  }
-
-  // 2. Check if this specific limit is hit (0%)
-  // For 5-hour limit: "hit your 5-hour limit, it will refresh in..."
-  // For weekly limit: "hit your weekly limit"
-  if (subStr.includes('hit your weekly limit') || (subStr.includes('hit your 5-hour limit') && !subStr.includes('does not currently apply'))) {
-    return { percentage: 0, resetText };
-  }
-
-  // 3. Extract IEEE 754 Float using Protobuf Field Tag 0x25 (Field 4, Wire Type 5)
-  let percentage = 100;
-  let tagIdx = -1;
-  while ((tagIdx = sub.indexOf(0x25, tagIdx + 1)) !== -1) {
-    if (tagIdx + 4 < sub.length) {
-      const flt = sub.readFloatLE(tagIdx + 1);
-      if (!isNaN(flt) && flt >= 0.0 && flt <= 1.0) {
-        percentage = Math.round(flt * 100);
-        break;
-      }
-    }
-  }
-
-  // Fallback if tag 0x25 is missing
-  if (tagIdx === -1) {
-    for (let i = 0; i <= sub.length - 4; i++) {
-      const flt = sub.readFloatLE(i);
-      if (!isNaN(flt) && flt >= 0.001 && flt <= 0.999) {
-        percentage = Math.round(flt * 100);
-        break;
-      }
-    }
-  }
-
-  return { percentage, resetText };
-}
-
-export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
-  const geminiWeekly = parseSectionQuota(buf, 'gemini-weekly', 'gemini-5h');
-  const gemini5h = parseSectionQuota(buf, 'gemini-5h', '3p-weekly');
-  const claudeWeekly = parseSectionQuota(buf, '3p-weekly', '3p-5h');
-  const claude5h = parseSectionQuota(buf, '3p-5h', 'Claude and GPT models');
-
-  return {
-    gemini: {
-      weeklyPercent: geminiWeekly.percentage,
-      weeklyResetText: geminiWeekly.resetText,
-      fiveHourPercent: gemini5h.percentage,
-      fiveHourResetText: gemini5h.resetText
-    },
-    claudeGpt: {
-      weeklyPercent: claudeWeekly.percentage,
-      weeklyResetText: claudeWeekly.resetText,
-      fiveHourPercent: claude5h.percentage,
-      fiveHourResetText: claude5h.resetText
-    },
-    fetchedAt: new Date(),
-    isAvailable: true
-  };
-}
-
 async function main() {
   console.log("==================================================");
   console.log(" Testing Accurate Weekly vs 5-Hour Hit Detector");
   console.log("==================================================");
 
-  const conn = findLanguageServer();
+  const conn = LanguageServerDiscovery.discover();
   if (!conn) {
     console.log("Language Server not found!");
     return;

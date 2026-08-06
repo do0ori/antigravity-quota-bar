@@ -14,8 +14,8 @@ export class QuotaClient {
         return { ...this.lastSnapshot, isAvailable: false, errorMessage: 'Language Server disconnected' };
       }
       return {
-        gemini: { weeklyPercent: 0, fiveHourPercent: 0 },
-        claudeGpt: { weeklyPercent: 0, fiveHourPercent: 0 },
+        gemini: { weeklyPercent: 0, hasWeeklyLimit: false, fiveHourPercent: 0, hasFiveHourLimit: false },
+        claudeGpt: { weeklyPercent: 0, hasWeeklyLimit: false, fiveHourPercent: 0, hasFiveHourLimit: false },
         fetchedAt: new Date(),
         isAvailable: false,
         errorMessage: 'Language Server process not found'
@@ -45,8 +45,8 @@ export class QuotaClient {
     }
 
     return {
-      gemini: { weeklyPercent: 0, fiveHourPercent: 0 },
-      claudeGpt: { weeklyPercent: 0, fiveHourPercent: 0 },
+      gemini: { weeklyPercent: 0, hasWeeklyLimit: false, fiveHourPercent: 0, hasFiveHourLimit: false },
+      claudeGpt: { weeklyPercent: 0, hasWeeklyLimit: false, fiveHourPercent: 0, hasFiveHourLimit: false },
       fetchedAt: new Date(),
       isAvailable: false,
       errorMessage: 'Failed to fetch quota from server'
@@ -89,15 +89,20 @@ export class QuotaClient {
     });
   }
 
-  private parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string } {
+  private parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string; exists: boolean } {
     const idx = buf.indexOf(sectionId);
     if (idx === -1) {
-      return { percentage: 100 };
+      return { percentage: 100, exists: false };
     }
 
     const endIdx = nextSectionId ? buf.indexOf(nextSectionId, idx) : -1;
     const sub = endIdx !== -1 ? buf.subarray(idx, endIdx) : buf.subarray(idx, Math.min(buf.length, idx + 250));
     const subStr = sub.toString('utf8');
+
+    // Check if limit does not apply
+    if (subStr.includes('does not currently apply')) {
+      return { percentage: 100, exists: false };
+    }
 
     // 1. Extract Reset Text (flexible matching for all refresh text variations)
     let resetText: string | undefined = undefined;
@@ -113,8 +118,8 @@ export class QuotaClient {
     }
 
     // 2. Check if this specific limit is hit (0%)
-    if (subStr.includes('hit your weekly limit') || (subStr.includes('hit your 5-hour limit') && !subStr.includes('does not currently apply'))) {
-      return { percentage: 0, resetText };
+    if (subStr.includes('hit your weekly limit') || subStr.includes('hit your 5-hour limit')) {
+      return { percentage: 0, resetText, exists: true };
     }
 
     // 3. Extract IEEE 754 Float using Protobuf Field Tag 0x25 (Field 4, Wire Type 5)
@@ -141,7 +146,7 @@ export class QuotaClient {
       }
     }
 
-    return { percentage, resetText };
+    return { percentage, resetText, exists: true };
   }
 
   private parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
@@ -154,14 +159,18 @@ export class QuotaClient {
       gemini: {
         weeklyPercent: geminiWeekly.percentage,
         weeklyResetText: geminiWeekly.resetText,
-        fiveHourPercent: gemini5h.percentage,
-        fiveHourResetText: gemini5h.resetText
+        hasWeeklyLimit: geminiWeekly.exists,
+        fiveHourPercent: gemini5h.exists ? gemini5h.percentage : undefined,
+        fiveHourResetText: gemini5h.exists ? gemini5h.resetText : undefined,
+        hasFiveHourLimit: gemini5h.exists
       },
       claudeGpt: {
         weeklyPercent: claudeWeekly.percentage,
         weeklyResetText: claudeWeekly.resetText,
-        fiveHourPercent: claude5h.percentage,
-        fiveHourResetText: claude5h.resetText
+        hasWeeklyLimit: claudeWeekly.exists,
+        fiveHourPercent: claude5h.exists ? claude5h.percentage : undefined,
+        fiveHourResetText: claude5h.exists ? claude5h.resetText : undefined,
+        hasFiveHourLimit: claude5h.exists
       },
       fetchedAt: new Date(),
       isAvailable: true

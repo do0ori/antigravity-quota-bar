@@ -2,6 +2,12 @@
 
 All notable changes to the "Antigravity Group Quota Bar" extension will be documented in this file.
 
+## [0.2.2] - 2026-08-06
+
+### Fixed
+- **Plan-Aware Quota Display**: Added support for accounts without 5-hour limits (e.g. Free tier / Weekly-only plans).
+- **Fallback Percentage Fix**: Prevented non-existent 5-hour limit sections from defaulting to 100% in status bar display and hover tooltips.
+
 ## [0.2.1] - 2026-08-05
 
 ### Changed
