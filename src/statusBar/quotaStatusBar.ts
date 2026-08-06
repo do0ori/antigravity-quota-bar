@@ -24,11 +24,17 @@ export class QuotaStatusBar {
 
     const { gemini, claudeGpt } = snapshot;
 
-    // Helper to get effective percentage (5-hour limit if available, otherwise weekly limit)
+    // Helper to get effective percentage for status bar display
     const getEffectivePercent = (m: typeof gemini) => {
+      // 1. If weekly limit is exhausted (0%), status bar shows 0%
+      if (m.hasWeeklyLimit && m.weeklyPercent === 0) {
+        return 0;
+      }
+      // 2. If 5-hour limit exists, show 5-hour rolling percentage
       if (m.hasFiveHourLimit && m.fiveHourPercent !== undefined) {
         return m.fiveHourPercent;
       }
+      // 3. Fallback: show weekly percentage (for plans without 5-hour limit)
       return m.weeklyPercent;
     };
 
@@ -65,6 +71,15 @@ export class QuotaStatusBar {
       : '';
 
     const render5hRow = (m: typeof gemini, barUri: string) => {
+      // State 1: Weekly limit reached (5-hour limit temporarily disabled)
+      if (m.hasWeeklyLimit && m.weeklyPercent === 0) {
+        return `
+  <div style="${flexRowStyle}">
+    <span style="${labelStyle}">5-Hour Limit</span>
+    <span style="${timeStyle}; margin-left:0;">N/A (Weekly limit reached)</span>
+  </div>`;
+      }
+      // State 2: Active 5-hour limit
       if (m.hasFiveHourLimit && m.fiveHourPercent !== undefined) {
         return `
   <div style="${flexRowStyle}">
@@ -74,10 +89,11 @@ export class QuotaStatusBar {
     <span style="${timeStyle}">${m.fiveHourResetText ? `(${m.fiveHourResetText})` : ''}</span>
   </div>`;
       }
+      // State 3: Plan has no 5-hour limit
       return `
   <div style="${flexRowStyle}">
     <span style="${labelStyle}">5-Hour Limit</span>
-    <span style="${timeStyle}; margin-left:0;">N/A (Not applicable to plan)</span>
+    <span style="${timeStyle}; margin-left:0;">N/A (No 5-hour limit)</span>
   </div>`;
     };
 
