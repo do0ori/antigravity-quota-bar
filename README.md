@@ -6,6 +6,12 @@
 
 Monitor your **Gemini** and **Claude / GPT** 4-group weekly and 5-hour quotas directly in the VS Code / Antigravity IDE Status Bar.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/do0ori/antigravity-quota-bar/main/images/antigravity-group-quota-bar-thumbnail.png" alt="Antigravity Group Quota Bar Thumbnail" />
+</p>
+
+## 📊 Demo
+
 ![Antigravity Quota Preview](https://raw.githubusercontent.com/do0ori/antigravity-quota-bar/main/images/preview.jpg)
 
 ---

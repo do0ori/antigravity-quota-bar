@@ -6,6 +6,12 @@
 
 Antigravity IDE의 **Gemini** 및 **Claude / GPT** 4가지 Group Quota(주간 및 5시간 한도) 상태를 하단 상태바에서 실시간으로 직관적으로 확인할 수 있는 초경량 확장 프로그램입니다.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/do0ori/antigravity-quota-bar/main/images/antigravity-group-quota-bar-thumbnail.png" alt="Antigravity Group Quota Bar Thumbnail" />
+</p>
+
+## 📊 Demo
+
 ![Antigravity Quota Preview](https://raw.githubusercontent.com/do0ori/antigravity-quota-bar/main/images/preview.jpg)
 
 ---
