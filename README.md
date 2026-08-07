@@ -20,7 +20,7 @@ Monitor your **Gemini** and **Claude / GPT** 4-group weekly and 5-hour quotas di
 
 - **Exact 4-Group Quota Tracking**: Matches the official Antigravity IDE Settings screen (`Gemini Weekly/5-Hour` + `Claude & GPT Weekly/5-Hour`) 100%.
 - **Minimalist Status Bar Indicator**: Displays current 5-hour limit percentages in an elegant, non-distracting style (`✨ 78% │ 🤖 0%`).
-- **Pixel-Perfect Hover Tooltip**: Hovering over the status bar opens a theme-adaptive HTML grid with 100-percentage SVG progress bars.
+- **Hover Tooltip**: Hovering over the status bar shows SVG quota progress bars, the raw local plan ID, and the refresh time.
 - **Accurate Hit-Limit Parser**: Correctly parses weekly limits even when 5-hour limits are currently active (`You have hit your 5-hour limit, so the weekly limit does not currently apply`).
 - **Configurable Auto-Polling & Smart Refresh**: Auto-refreshes every 30 seconds (configurable) and automatically updates right after you use AI models in the editor.
 - **100% Private & Local**: Communicates strictly with your local Antigravity Language Server (`127.0.0.1`). Zero external data transmission.
@@ -42,7 +42,7 @@ Monitor your **Gemini** and **Claude / GPT** 4-group weekly and 5-hour quotas di
 Search for **`Antigravity Group Quota Bar`** in the Extensions view (`Ctrl + Shift + X`) and click **Install**.
 
 ### Option 2: Direct VSIX Install
-1. Download `antigravity-quota-bar-0.1.0.vsix` from Releases.
+1. Download the latest `antigravity-quota-bar-<version>.vsix` from Releases.
 2. In VS Code / Antigravity IDE, press `Ctrl + Shift + X`.
 3. Click `...` (More Actions) ➔ **Install from VSIX...** and select the file.
 

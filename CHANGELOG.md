@@ -2,6 +2,19 @@
 
 All notable changes to the "Antigravity Group Quota Bar" extension will be documented in this file.
 
+## [0.3.0] - 2026-08-07
+
+### Added
+- **User Plan ID**: Reads the raw local Antigravity plan ID (for example, `free-tier` or `g1-pro-tier`) and shows it in the quota hover footer.
+- **Plan Probe**: Extended `scripts/probe-quota.ts` to inspect the local `GetUserStatus` endpoint and display its plan ID.
+
+### Changed
+- **Hover Rendering**: Removed unsupported inline layout and text styles, relying on the VS Code-supported HTML subset and native SVG progress bars.
+- **Tooltip Footer**: Shows the plan ID and refresh time in a compact italic footer.
+
+### Removed
+- **Dead UI Code**: Removed the unused status-bar constructor argument and unused circular SVG generator.
+
 ## [0.2.3] - 2026-08-06
 
 ### Fixed

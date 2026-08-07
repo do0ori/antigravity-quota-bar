@@ -2,7 +2,7 @@
   "name": "antigravity-quota-bar",
   "displayName": "Antigravity Group Quota Bar",
   "description": "Monitor Gemini and Claude/GPT weekly and five-hour quotas from the status bar.",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "publisher": "do0ori",
   "license": "MIT",
   "engines": {
@@ -56,6 +56,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
+    "test": "npx tsx src/quota/userPlan.test.ts && npx tsx src/statusBar/tooltipFooter.test.ts",
     "watch": "tsc -watch -p ./",
     "package": "npx @vscode/vsce package --allow-missing-repository",
     "publish:vscode": "vsce publish",
