@@ -6,6 +6,7 @@ All notable changes to the "Antigravity Group Quota Bar" extension will be docum
 
 ### Added
 - **User Plan ID**: Reads the raw local Antigravity plan ID (for example, `free-tier` or `g1-pro-tier`) and shows it in the quota hover footer.
+- **Plan Refresh Policy**: Re-checks the cached plan ID every five minutes and on manual quota refresh, supporting account changes without adding a request to every quota poll.
 - **Plan Probe**: Extended `scripts/probe-quota.ts` to inspect the local `GetUserStatus` endpoint and display its plan ID.
 
 ### Changed

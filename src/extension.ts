@@ -11,9 +11,9 @@ export function activate(context: vscode.ExtensionContext) {
   const quotaClient = new QuotaClient();
   const statusBar = new QuotaStatusBar();
 
-  async function updateQuota() {
+  async function updateQuota(forcePlanRefresh = false) {
     try {
-      const snapshot = await quotaClient.fetchQuotaSnapshot();
+      const snapshot = await quotaClient.fetchQuotaSnapshot(forcePlanRefresh);
       statusBar.update(snapshot);
     } catch (e) {
       console.error('Error updating quota:', e);
@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register manual refresh command
   const refreshCommand = vscode.commands.registerCommand('antigravityQuota.refresh', async () => {
     statusBar.showLoading();
-    await updateQuota();
+    await updateQuota(true);
     vscode.window.setStatusBarMessage('Antigravity Quota Refreshed', 2000);
   });
 

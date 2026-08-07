@@ -2,13 +2,14 @@ import http from 'http';
 import https from 'https';
 import { ModelQuotaSnapshot } from './quotaTypes';
 import { LanguageServerDiscovery } from './languageServerDiscovery';
-import { extractPlanId } from './userPlan';
+import { resolvePlanIdFromResponse, shouldRefreshPlan } from './userPlan';
 
 export class QuotaClient {
   private lastSnapshot: ModelQuotaSnapshot | null = null;
   private lastPlanId: string | undefined;
+  private lastPlanFetchedAt: number | undefined;
 
-  public async fetchQuotaSnapshot(): Promise<ModelQuotaSnapshot> {
+  public async fetchQuotaSnapshot(forcePlanRefresh = false): Promise<ModelQuotaSnapshot> {
     const conn = LanguageServerDiscovery.discover();
 
     if (!conn) {
@@ -35,12 +36,10 @@ export class QuotaClient {
           const buf = await this.queryPort(isHttps, port, conn.csrfToken, 'RetrieveUserQuotaSummary');
           if (buf && buf.length > 0) {
             const snapshot = this.parseQuotaProtobufResponse(buf);
-            if (!this.lastPlanId) {
-              const userStatus = await this.queryPort(isHttps, port, conn.csrfToken, 'GetUserStatus', 250);
-              const planId = userStatus ? extractPlanId(userStatus) : undefined;
-              if (planId) {
-                this.lastPlanId = planId;
-              }
+            if (shouldRefreshPlan(this.lastPlanFetchedAt, Date.now(), forcePlanRefresh)) {
+              const userStatus = await this.queryPort(isHttps, port, conn.csrfToken, 'GetUserStatus', 1000);
+              this.lastPlanId = resolvePlanIdFromResponse(this.lastPlanId, userStatus);
+              this.lastPlanFetchedAt = Date.now();
             }
             snapshot.planId = this.lastPlanId;
             this.lastSnapshot = snapshot;
