@@ -10,6 +10,7 @@ export interface QuotaMetric {
 export interface ModelQuotaSnapshot {
   gemini: QuotaMetric;
   claudeGpt: QuotaMetric;
+  planId?: string;             // Raw plan ID from GetUserStatus, e.g. "g1-pro-tier"
   fetchedAt: Date;
   isAvailable: boolean;
   errorMessage?: string;

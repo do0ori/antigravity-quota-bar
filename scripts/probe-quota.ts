@@ -19,6 +19,26 @@ export interface ModelQuotaSnapshot {
   errorMessage?: string;
 }
 
+/**
+ * Extract only plan-related, human-readable strings from the protobuf payload.
+ * This deliberately ignores unrelated strings so the probe does not print
+ * account details, tokens, or the full raw response.
+ */
+export function extractPlanCandidates(buf: Buffer): string[] {
+  const printableStrings = buf
+    .toString('utf8')
+    .match(/[\x20-\x7E]{3,}/g) ?? [];
+
+  // Model names such as "Gemini Pro" are not user subscription plans. Require
+  // an explicit plan/membership label before considering a value a candidate.
+  const planKeywords = /\b(plan|tier|subscription|membership)\b/i;
+  return Array.from(new Set(
+    printableStrings
+      .map((value) => value.trim())
+      .filter((value) => value.length <= 120 && planKeywords.test(value))
+  ));
+}
+
 function parseSectionQuota(buf: Buffer, sectionId: string, nextSectionId?: string): { percentage: number; resetText?: string; exists: boolean } {
   const idx = buf.indexOf(sectionId);
   if (idx === -1) {
@@ -107,10 +127,10 @@ export function parseQuotaProtobufResponse(buf: Buffer): ModelQuotaSnapshot {
   };
 }
 
-function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): Promise<Buffer | null> {
+function queryGrpcWebMethod(isHttps: boolean, port: number, csrfToken: string, method: string): Promise<Buffer | null> {
   return new Promise((resolve) => {
     const module = isHttps ? https : http;
-    const path = '/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary';
+    const path = `/exa.language_server_pb.LanguageServerService/${method}`;
     const frameHeader = Buffer.alloc(5);
     frameHeader.writeUInt8(0x00, 0);
     frameHeader.writeUInt32BE(0, 1);
@@ -143,6 +163,30 @@ function fetchQuotaFromPort(isHttps: boolean, port: number, csrfToken: string): 
   });
 }
 
+async function probePlanFromUserInfoMethods(isHttps: boolean, port: number, csrfToken: string): Promise<void> {
+  const methods = ['GetLocalUserInfo', 'FetchUserInfo', 'GetUserStatus'];
+
+  console.log('\nUSER PLAN PROBE:');
+  for (const method of methods) {
+    const response = await queryGrpcWebMethod(isHttps, port, csrfToken, method);
+    if (!response || response.length === 0) {
+      console.log(`- ${method}: unavailable`);
+      continue;
+    }
+
+    const planCandidates = extractPlanCandidates(response);
+    if (planCandidates.length === 0) {
+      console.log(`- ${method}: responded; no plan field found`);
+      continue;
+    }
+
+    console.log(`- ${method}:`);
+    for (const candidate of planCandidates) {
+      console.log(`  - ${candidate}`);
+    }
+  }
+}
+
 async function main() {
   console.log("==================================================");
   console.log(" Testing Accurate Weekly vs 5-Hour Hit Detector");
@@ -158,11 +202,22 @@ async function main() {
 
   for (const port of ports) {
     for (const isHttps of [false, true]) {
-      const buf = await fetchQuotaFromPort(isHttps, port, conn.csrfToken);
+      const buf = await queryGrpcWebMethod(isHttps, port, conn.csrfToken, 'RetrieveUserQuotaSummary');
       if (buf && buf.length > 0) {
         const snapshot = parseQuotaProtobufResponse(buf);
         console.log("\nPARSED LIVE QUOTA SNAPSHOT:");
         console.log(JSON.stringify(snapshot, null, 2));
+
+        const planCandidates = extractPlanCandidates(buf);
+        console.log("\nPLAN CANDIDATES:");
+        if (planCandidates.length === 0) {
+          console.log("None found in RetrieveUserQuotaSummary.");
+        } else {
+          for (const candidate of planCandidates) {
+            console.log(`- ${candidate}`);
+          }
+        }
+        await probePlanFromUserInfoMethods(isHttps, port, conn.csrfToken);
         return;
       }
     }

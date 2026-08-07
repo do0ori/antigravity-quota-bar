@@ -2,9 +2,11 @@ import http from 'http';
 import https from 'https';
 import { ModelQuotaSnapshot } from './quotaTypes';
 import { LanguageServerDiscovery } from './languageServerDiscovery';
+import { extractPlanId } from './userPlan';
 
 export class QuotaClient {
   private lastSnapshot: ModelQuotaSnapshot | null = null;
+  private lastPlanId: string | undefined;
 
   public async fetchQuotaSnapshot(): Promise<ModelQuotaSnapshot> {
     const conn = LanguageServerDiscovery.discover();
@@ -30,9 +32,17 @@ export class QuotaClient {
     for (const port of ports) {
       for (const isHttps of [false, true]) {
         try {
-          const buf = await this.queryPort(isHttps, port, conn.csrfToken);
+          const buf = await this.queryPort(isHttps, port, conn.csrfToken, 'RetrieveUserQuotaSummary');
           if (buf && buf.length > 0) {
             const snapshot = this.parseQuotaProtobufResponse(buf);
+            if (!this.lastPlanId) {
+              const userStatus = await this.queryPort(isHttps, port, conn.csrfToken, 'GetUserStatus', 250);
+              const planId = userStatus ? extractPlanId(userStatus) : undefined;
+              if (planId) {
+                this.lastPlanId = planId;
+              }
+            }
+            snapshot.planId = this.lastPlanId;
             this.lastSnapshot = snapshot;
             return snapshot;
           }
@@ -53,10 +63,10 @@ export class QuotaClient {
     };
   }
 
-  private queryPort(isHttps: boolean, port: number, csrfToken: string): Promise<Buffer | null> {
+  private queryPort(isHttps: boolean, port: number, csrfToken: string, method: string, timeout = 3000): Promise<Buffer | null> {
     return new Promise((resolve) => {
       const module = isHttps ? https : http;
-      const path = '/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary';
+      const path = `/exa.language_server_pb.LanguageServerService/${method}`;
       const frameHeader = Buffer.alloc(5);
       frameHeader.writeUInt8(0x00, 0);
       frameHeader.writeUInt32BE(0, 1);
@@ -74,7 +84,7 @@ export class QuotaClient {
           'Content-Length': frameHeader.length
         },
         rejectUnauthorized: false,
-        timeout: 3000
+        timeout
       }, (res) => {
         let chunks: Buffer[] = [];
         res.on('data', c => chunks.push(c));
